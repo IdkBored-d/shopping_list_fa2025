@@ -23,7 +23,7 @@ class _GroceryListState extends State<GroceryList> {
         title: const Text("Your Groceries"),
           actions: [
           IconButton(
-            onPressed: (){}, 
+            onPressed: _addItem, 
             icon: Icon(Icons.add_box)
             )
         ],
@@ -33,7 +33,7 @@ class _GroceryListState extends State<GroceryList> {
         itemBuilder: (ctx, index)=>ListTile(
           leading: Container(
             width: 24,
-            height:24,
+            height: 24,
             color: groceryItems[index].category.color,
           ),
           title: Text(groceryItems[index].name),

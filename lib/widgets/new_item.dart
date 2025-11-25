@@ -16,7 +16,8 @@ class _NewItemState extends State<NewItem>{
       appBar: AppBar(
         title: Text("Add a new item..."),
       ),
-      body: Padding(padding: EdgeInsets.all(12),
+      body: Padding(
+        padding: EdgeInsets.all(12),
       child: Form(
         child: Column( children: [
           TextFormField(
@@ -37,8 +38,7 @@ class _NewItemState extends State<NewItem>{
             ),
             Row(
               crossAxisAlignment: CrossAxisAlignment.end,
-            ),
-                Row(children: [
+              children: [
                 Expanded(
                   child: TextFormField(
                     decoration: InputDecoration(
@@ -49,7 +49,7 @@ class _NewItemState extends State<NewItem>{
                       if(value==null ||
                    value.isEmpty ||
                    int.tryParse(value) == null ||
-                   int.tryParse(value)! <= 0){
+                   int.tryParse(value)!<= 0){
                   return "Must have a name between 2 and 50 characters long!";
                 }
                 else{
@@ -62,7 +62,9 @@ class _NewItemState extends State<NewItem>{
                 Expanded(
                   child: DropdownButtonFormField(items: [
                     for(final category in categories.entries)
-                    DropdownMenuItem(child: Row(children: [
+                    DropdownMenuItem(
+                      value: category.value,
+                      child: Row(children: [
                       Container(
                         width: 16,
                         height: 16,
