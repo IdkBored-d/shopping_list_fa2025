@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:shopping_list_fa2025/data/categories.dart';
+import 'package:shopping_list_fa2025/data/dummy_items.dart';
 import 'package:shopping_list_fa2025/models/category.dart';
+import 'package:shopping_list_fa2025/models/grocery_item.dart';
 
 class NewItem extends StatefulWidget{
   const NewItem({super.key});
@@ -12,7 +14,7 @@ class NewItem extends StatefulWidget{
 
 class _NewItemState extends State<NewItem>{
   final _formKey = GlobalKey<FormState>();
-  var _eneteredName = "";
+  var _eneteredName = '';
   var _enteredQuantity = 1;
   var _selectedCategory = categories[Categories.vegetables]!;
 
@@ -20,9 +22,17 @@ class _NewItemState extends State<NewItem>{
     if(_formKey.currentState!.validate())
     {
           _formKey.currentState!.save();
-          print(_eneteredName);
-          print(_enteredQuantity);
-          print(_selectedCategory.title);
+          // print(_eneteredName);
+          // print(_enteredQuantity);
+          // print(_selectedCategory.title);
+          Navigator.of(context).pop(
+            GroceryItem(
+              id: DateTime.now().toString(), 
+              name: _eneteredName, 
+              quantity: _enteredQuantity, 
+              category: _selectedCategory
+              ),
+          );
     }
   }
 
@@ -59,6 +69,7 @@ class _NewItemState extends State<NewItem>{
               children: [
                 Expanded(
                   child: TextFormField(
+                    keyboardType: TextInputType.number,
                     decoration: InputDecoration(
                       label: Text("Quanitity"),
                     ),
@@ -93,12 +104,15 @@ class _NewItemState extends State<NewItem>{
                       ),
                       const SizedBox(width: 6),
                       Text(category.value.title)
-                    ],))
+                    ],
+                    ),
+                    ),
                   ],
                    onChanged: (value){
                     setState(() {
                       _selectedCategory = value!;
-                    });
+                    }
+                    );
                    }),
                 )
               ],),
