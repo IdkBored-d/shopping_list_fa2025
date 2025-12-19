@@ -15,7 +15,7 @@ class NewItem extends StatefulWidget {
 
 class _NewItemState extends State<NewItem> {
   final _formKey = GlobalKey<FormState>();
-  var _eneteredName = '';
+  var _enteredName = '';
   var _enteredQuantity = 1;
   var _selectedCategory = categories[Categories.vegetables]!;
   var _isSending = false;
@@ -30,27 +30,47 @@ class _NewItemState extends State<NewItem> {
         "shopping-list-c75cf-default-rtdb.firebaseio.com",
         'shopping-list.json',
       );
-      final response = await http.post(
-        url,
-        headers: {'Content-Type': 'application/json'},
-        body: json.encode({
-          'name': _eneteredName,
-          'quantity': _enteredQuantity,
-          'category': _selectedCategory,
-        }),
-      );
-      final Map<String, dynamic> resData = json.decode(response.body);
-      if (!context.mounted) {
-        return;
+      try {
+        final response = await http.post(
+          url,
+          headers: {'Content-Type': 'application/json'},
+          body: json.encode({
+            'name': _enteredName,
+            'quantity': _enteredQuantity,
+            'category': _selectedCategory.title,
+          }),
+        );
+        if (response.statusCode >= 400) {
+          if (!context.mounted) return;
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to save item. Please try again.')),
+          );
+          setState(() {
+            _isSending = false;
+          });
+          return;
+        }
+        final Map<String, dynamic> resData = json.decode(response.body);
+        if (!context.mounted) {
+          return;
+        }
+        Navigator.of(context).pop(
+          GroceryItem(
+            id: resData['name'],
+            name: _enteredName,
+            quantity: _enteredQuantity,
+            category: _selectedCategory,
+          ),
+        );
+      } catch (e) {
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to save item. Please try again.')),
+        );
+        setState(() {
+          _isSending = false;
+        });
       }
-      Navigator.of(context).pop(
-        GroceryItem(
-          id: resData['name'],
-          name: _eneteredName,
-          quantity: _enteredQuantity,
-          category: _selectedCategory,
-        ),
-      );
     }
   }
 
@@ -77,7 +97,7 @@ class _NewItemState extends State<NewItem> {
                   return null;
                 },
                 onSaved: (value) {
-                  _eneteredName = value!;
+                  _enteredName = value!;
                 },
               ),
               Row(
@@ -86,14 +106,14 @@ class _NewItemState extends State<NewItem> {
                   Expanded(
                     child: TextFormField(
                       keyboardType: TextInputType.number,
-                      decoration: InputDecoration(label: Text("Quanitity")),
+                      decoration: InputDecoration(label: Text("Quantity")),
                       initialValue: '1',
                       validator: (value) {
                         if (value == null ||
                             value.isEmpty ||
                             int.tryParse(value) == null ||
                             int.tryParse(value)! <= 0) {
-                          return "Must have a name between 2 and 50 characters long!";
+                          return "Must be a positive number!";
                         }
                         return null;
                       },
@@ -147,12 +167,12 @@ class _NewItemState extends State<NewItem> {
                   ElevatedButton(
                     onPressed: _isSending ? null : _saveItem,
                     child: _isSending
-                        ? null
-                        : SizedBox(
+                        ? const SizedBox(
                             height: 16,
                             width: 16,
-                            child: Text("Add Item"),
-                          ),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Text("Add Item"),
                   ),
                 ],
               ),

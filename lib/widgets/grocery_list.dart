@@ -17,6 +17,7 @@ class GroceryList extends StatefulWidget {
 class _GroceryListState extends State<GroceryList> {
   List<GroceryItem> _groceryItems = [];
   var _isLoading = true;
+  String? _error;
   @override
   void initState() {
     super.initState();
@@ -28,35 +29,61 @@ class _GroceryListState extends State<GroceryList> {
       "shopping-list-c75cf-default-rtdb.firebaseio.com",
       'shopping-list.json',
     );
-    final response = await http.get(url);
-    final Map<String, dynamic> listData = json.decode(response.body);
-    final List<GroceryItem> loadedItems = [];
-    for (final item in listData.entries) {
-      final currentCat = categories.entries
-          .firstWhere(
-            (catItem) => catItem.value.title == item.value['category'],
-          )
-          .value;
-      loadedItems.add(
-        GroceryItem(
-          id: item.key,
-          name: item.value['name'],
-          quantity: item.value['quantity'],
-          category: currentCat,
-        ),
-      );
+    try {
+      final response = await http.get(url);
+      if (response.statusCode >= 400) {
+        setState(() {
+          _error = "Failed to fetch data. Try again later";
+          _isLoading = false;
+        });
+        return;
+      }
+      final Map<String, dynamic>? listData = json.decode(response.body);
+      if (listData == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+      final List<GroceryItem> loadedItems = [];
+      for (final item in listData.entries) {
+        try {
+          final currentCat = categories.entries
+              .firstWhere(
+                (catItem) => catItem.value.title == item.value['category'],
+                orElse: () => categories.entries.first,
+              )
+              .value;
+          loadedItems.add(
+            GroceryItem(
+              id: item.key,
+              name: item.value['name'] ?? '',
+              quantity: item.value['quantity'] ?? 1,
+              category: currentCat,
+            ),
+          );
+        } catch (e) {
+          // Skip invalid items
+          continue;
+        }
+      }
+      setState(() {
+        _groceryItems = loadedItems;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _error = "Failed to fetch data. Try again later";
+        _isLoading = false;
+      });
     }
-    setState(() {
-      _groceryItems = loadedItems;
-      _isLoading = false;
-    });
   }
 
   void _addItem() async {
     final newItem = await Navigator.of(
       context,
     ).push<GroceryItem>(MaterialPageRoute(builder: (ctx) => const NewItem()));
-    if(newItem == null){
+    if (newItem == null) {
       return;
     }
     setState(() {
@@ -64,10 +91,34 @@ class _GroceryListState extends State<GroceryList> {
     });
   }
 
-  void _removeItem(GroceryItem item) {
+  void _removeItem(GroceryItem item) async {
+    final index = _groceryItems.indexOf(item);
     setState(() => _groceryItems.remove(item));
-    for (var i = 0; i < _groceryItems.length; i++) {
-      print(_groceryItems[i].name);
+    final url = Uri.https(
+      "shopping-list-c75cf-default-rtdb.firebaseio.com",
+      'shopping-list/${item.id}.json',
+    );
+    try {
+      var response = await http.delete(url);
+      if (response.statusCode >= 400) {
+        if (mounted) {
+          setState(() {
+            _groceryItems.insert(index, item);
+          });
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Failed to delete item. Please try again.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _groceryItems.insert(index, item);
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Failed to delete item. Please try again.')),
+        );
+      }
     }
   }
 
@@ -76,10 +127,11 @@ class _GroceryListState extends State<GroceryList> {
     Widget content = const Center(
       child: Text("Please Click the + Button to add an Item"),
     );
-    if(_isLoading){
+    if (_isLoading) {
       content = const Center(child: CircularProgressIndicator());
-    }
-    if (_groceryItems.isNotEmpty) {
+    } else if (_error != null && _error!.isNotEmpty) {
+      content = Center(child: Text(_error!));
+    } else if (_groceryItems.isNotEmpty) {
       content = ListView.builder(
         itemCount: _groceryItems.length,
         itemBuilder: (ctx, index) => Dismissible(
@@ -99,7 +151,6 @@ class _GroceryListState extends State<GroceryList> {
         ),
       );
     }
-
     return Scaffold(
       appBar: AppBar(
         title: const Text("Your Groceries"),
